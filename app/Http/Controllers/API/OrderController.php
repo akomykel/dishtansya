@@ -3,82 +3,42 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Repository\Order\OrderRepository;
+use App\Repository\Product\ProductRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use App\Http\Resources\OrderResource;
+
 
 class OrderController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+    private $orderRepository;
+    private $productRepository;
+
+    public function __construct(OrderRepository $orderRepository, ProductRepository $productRepository) {
+        $this->orderRepository = $orderRepository;
+        $this->productRepository = $productRepository;
+    }
+
     public function index()
     {
-        $orders = Order::all();
-        return response([ 'orders' => OrderResource::collection($orders), 'message' => 'Retrieved successfully'], 200);
+        $orders = $this->orderRepository->index();
+        return $orders;
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
-        $data = $request->all();
+        $order = $this->orderRepository->store($request);
 
-        $validator = Validator::make($data, [
-            'user_id' => 'required',
-            'product_id' => 'required',
-            'quantity' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            return response(['error' => $validator->errors(), 'Validation Error']);
+        if($order == true){
+            $product = $this->productRepository->minus_product_quantity($request);
+            return $product;
         }
 
-        $order = Order::create($data);
-
-        return response(['message' => 'You have successfully ordered this product.'], 201);
+        return $order;
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
     public function show(Order $order)
     {
-        return response(['order' => new OrderResource($order), 'message' => 'Retrieved successfully'], 200);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Order $order)
-    {
-        $order->update($request->all());
-        return response(['order' => new OrderResource($order), 'message' => 'Update successfully'], 200);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Order $order)
-    {
-        $order->delete();
-        return response(['message' => 'Deleted']);
+        $order = $this->orderRepository->show($order);
+        return $order;
     }
 }
